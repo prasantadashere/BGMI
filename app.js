@@ -54,6 +54,7 @@ function renderPublic(){
   setSelect("eventFilter",evOpts,"All events",$("eventFilter").value); setSelect("matchEventFilter",evOpts,"All events",$("matchEventFilter").value);
   const groupOpts=state.groups.map(g=>({value:g.id,label:g.name}));
   setSelect("leaderGroupFilter",groupOpts,"All groups",$("leaderGroupFilter").value);
+  setSelect("teamGroupFilter",groupOpts,"All groups",$("teamGroupFilter").value);
   const eventId=$("eventFilter").value || state.events[0]?.id || "";
   const groupId=$("leaderGroupFilter").value;
   let totals=[];
@@ -67,8 +68,11 @@ function renderPublic(){
     totals=Object.values(map).sort((a,b)=>b.points-a.points||b.wwcd-a.wwcd||b.kills-a.kills);
   }
   $("leaderboardBody").innerHTML=totals.length?totals.map((s,i)=>`<tr><td class="rank-cell ${i===0?"rank-1":""}">${String(i+1).padStart(2,"0")}</td><td><div class="team-cell"><span class="team-badge">${esc(initials(s.team.name))}</span><span><span class="team-name">${esc(s.team.name)}</span><span class="team-sub">${s.matches} match${s.matches===1?"":"es"} played</span></span></div></td><td><span class="group-tag">${esc(groupName(s.team.group_id))}</span></td><td class="numeric chicken-count">${s.wwcd}</td><td class="numeric">${s.matches}</td><td class="numeric">${s.placement}</td><td class="numeric">${s.kills}</td><td class="numeric"><span class="points-strong">${s.points}</span></td></tr>`).join(""):`<tr><td colspan="8" class="empty-cell">${state.teams.length?"No results have been entered for this event yet.":"No teams registered yet. Check back soon."}</td></tr>`;
-  $("teamsGrid").innerHTML=state.teams.length?state.teams.map(t=>`<article class="team-card"><div class="team-card-top"><span class="team-badge">${esc(initials(t.name))}</span><span class="group-tag">${esc(groupName(t.group_id))}</span></div><h3>${esc(t.name)}</h3><p>Registered squad · Contact admin for details</p></article>`).join(""):`<div class="empty-card">Team roster will appear here once the tournament admin adds teams.</div>`;
+  const selectedTeamGroup=$("teamGroupFilter").value;
+  const visibleTeams=state.teams.filter(t=>!selectedTeamGroup||t.group_id===selectedTeamGroup);
+  $("teamsGrid").innerHTML=visibleTeams.length?visibleTeams.map(t=>`<article class="team-card"><div class="team-card-top"><span class="team-badge">${esc(initials(t.name))}</span><span class="group-tag">${esc(groupName(t.group_id))}</span></div><h3>${esc(t.name)}</h3><p>Registered squad · Contact admin for details</p></article>`).join(""):`<div class="empty-card">${state.teams.length?"No teams found in this group.":"Team roster will appear here once the tournament admin adds teams."}</div>`;
   $("teamCount").textContent=`${state.teams.length} team${state.teams.length===1?"":"s"} registered`;
+  $("teamFilterCount").textContent=selectedTeamGroup?`Showing ${visibleTeams.length} of ${state.teams.length} teams`:`Showing all ${state.teams.length} teams`;
   renderMatches();
 }
 function renderMatches(){
@@ -175,7 +179,7 @@ $("loginForm").addEventListener("submit",signIn);$("groupForm").addEventListener
 $("cancelTeamEdit").addEventListener("click",clearTeamForm);$("clearResult").addEventListener("click",()=>{state.editingResultId=null;$("resultForm").reset();$("resultKills").value="0";updateScorePreview();});
 $("resultPlacement").addEventListener("change",updateScorePreview);$("resultKills").addEventListener("input",updateScorePreview);
 $("resultEvent").addEventListener("change",()=>{refreshResultMatchOptions();renderAdminResults();});$("resultMatch").addEventListener("change",renderAdminResults);$("resultGroup").addEventListener("change",refreshResultTeamOptions);
-$("eventFilter").addEventListener("change",renderPublic);$("leaderGroupFilter").addEventListener("change",renderPublic);$("matchEventFilter").addEventListener("change",renderMatches);$("refreshBtn").addEventListener("click",loadPublic);$("logoutBtn").addEventListener("click",async()=>{if(db)await db.auth.signOut();state.session=null;state.contacts={};closeConsole();showToast("Signed out.");});
+$("eventFilter").addEventListener("change",renderPublic);$("leaderGroupFilter").addEventListener("change",renderPublic);$("teamGroupFilter").addEventListener("change",renderPublic);$("matchEventFilter").addEventListener("change",renderMatches);$("refreshBtn").addEventListener("click",loadPublic);$("logoutBtn").addEventListener("click",async()=>{if(db)await db.auth.signOut();state.session=null;state.contacts={};closeConsole();showToast("Signed out.");});
 $("adminModal").addEventListener("click",e=>{if(e.target===$("adminModal")){$("adminModal").classList.remove("open");$("adminModal").setAttribute("aria-hidden","true");}});
 $("year").textContent=new Date().getFullYear();
 if(db){db.auth.onAuthStateChange((_event,session)=>{state.session=session;if(session){setTimeout(()=>adminCheck(),0);}else{state.contacts={};}});adminCheck();loadPublic();setInterval(loadPublic,15000);}
